@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XMind</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<style>
+  body {
+    background-color: #f8f9fa;
+  }
+  #mindmap {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    min-height: 400px;
+  }
+  .topic {
+    cursor: pointer;
+  }
+  .topic:hover {
+    background-color: #f0f0f0;
+  }
+  .topic-children {
+    padding-left: 20px;
+  }
+  .navbar-custom {
+    background-color: #3333333d;
+  }
+  .navbar-custom .navbar-brand,
+  .navbar-custom .navbar-text {
+    color: #fff;
+  }
+  .navbar-custom .navbar-nav .nav-link {
+    color: #000000;
+   
+  }
+</style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-custom">
+    <a class="navbar-brand" href="#">XMind</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a  class="nav-link" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Contact</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container mt-5">
+    <div class="row">
+      <div class="col-md-6">
+        <div id="mindmap" class="p-3"></div>
+      </div>
+      <div class="col-md-6">
+        <form id="topicForm">
+          <div class="form-group">
+            <label for="topicName">Topic Name</label>
+            <input type="text" class="form-control" id="topicName" placeholder="Enter topic name" required>
+          </div>
+          <div class="form-group">
+            <label for="parentTopic">Parent Topic</label>
+            <select class="form-control" id="parentTopic">
+              <option value="">No parent</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary mr-2">Add Topic</button>
+          <button type="button" id="deleteTopicBtn" class="btn btn-danger">Delete Topic</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+ <script>
+  let topics = [
+    { id: 1, name: 'Topic 1', parentId: null },
+    { id: 2, name: 'Topic 2', parentId: 1 },
+    { id: 3, name: 'Topic 3', parentId: 2 }
+  ];
+
+  function populateParentTopicDropdown() {
+    const parentTopicSelect = document.getElementById('parentTopic');
+    parentTopicSelect.innerHTML = '<option value="">No parent</option>';
+    topics.forEach(topic => {
+      const option = document.createElement('option');
+      option.value = topic.id;
+      option.textContent = topic.name;
+      parentTopicSelect.appendChild(option);
+    });
+  }
+
+  function addTopic(e) {
+    e.preventDefault();
+    const topicName = document.getElementById('topicName').value;
+    const parentTopic = document.getElementById('parentTopic').value;
+    const newTopic = { id: topics.length + 1, name: topicName, parentId: parentTopic || null };
+    topics.push(newTopic);
+    populateParentTopicDropdown();
+    renderMindMap();
+  }
+
+  function deleteTopic() {
+    const topicName = document.getElementById('topicName').value;
+    const index = topics.findIndex(topic => topic.name === topicName);
+    if (index !== -1) {
+      topics.splice(index, 1);
+      populateParentTopicDropdown();
+      renderMindMap();
+    } else {
+      alert('Topic not found!');
+    }
+  }
+
+  function handleDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.dataset.id);
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    const topicId = e.dataTransfer.getData('text/plain');
+    const topicDiv = document.querySelector(`[data-id="${topicId}"]`);
+    const parentTopicId = e.target.closest('.topic').dataset.id;
+    const newIndex = topics.findIndex(topic => topic.id === parseInt(parentTopicId));
+    const oldIndex = topics.findIndex(topic => topic.id === parseInt(topicId));
+    const [topic] = topics.splice(oldIndex, 1);
+    topics.splice(newIndex, 0, topic);
+    renderMindMap();
+  }
+
+  function enableDragAndDrop() {
+    const topicDivs = document.querySelectorAll('.topic');
+    topicDivs.forEach(topicDiv => {
+      topicDiv.setAttribute('draggable', true);
+      topicDiv.addEventListener('dragstart', handleDragStart);
+      topicDiv.addEventListener('dragover', handleDragOver);
+      topicDiv.addEventListener('drop', handleDrop);
+    });
+  }
+
+  function editTopicName(topicId) {
+    const topicDiv = document.querySelector(`[data-id="${topicId}"]`);
+    const topicName = topicDiv.textContent;
+    const inputField = document.createElement('input');
+    inputField.type = 'text';
+    inputField.value = topicName;
+    const saveButton = document.createElement('button');
+    saveButton.textContent = 'Save';
+    saveButton.addEventListener('click', () => {
+      const newName = inputField.value;
+      const topicIndex = topics.findIndex(topic => topic.id === topicId);
+      if (topicIndex !== -1) {
+        topics[topicIndex].name = newName;
+        renderMindMap();
+      }
+    });
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.addEventListener('click', () => {
+      renderMindMap();
+    });
+    topicDiv.textContent = '';
+    topicDiv.appendChild(inputField);
+    topicDiv.appendChild(saveButton);
+    topicDiv.appendChild(cancelButton);
+  }
+
+  function renderMindMap() {
+    const mindmapDiv = document.getElementById('mindmap');
+    mindmapDiv.innerHTML = '';
+    topics.forEach(topic => {
+      const topicDiv = document.createElement('div');
+      topicDiv.classList.add('topic', 'p-2', 'mb-2');
+      topicDiv.textContent = topic.name;
+      topicDiv.setAttribute('data-id', topic.id);
+      const editButton = document.createElement('button');
+      editButton.textContent = 'Edit';
+      editButton.addEventListener('click', () => {
+        editTopicName(topic.id);
+      });
+      topicDiv.appendChild(editButton);
+      if (topic.parentId) {
+        const parentTopicDiv = document.querySelector(`[data-id="${topic.parentId}"]`);
+        if (parentTopicDiv) {
+          const childrenContainer = parentTopicDiv.querySelector('.topic-children');
+          if (!childrenContainer) {
+            const newChildrenContainer = document.createElement('div');
+            newChildrenContainer.classList.add('topic-children');
+            parentTopicDiv.appendChild(newChildrenContainer);
+          }
+          parentTopicDiv.querySelector('.topic-children').appendChild(topicDiv);
+        }
+      } else {
+        mindmapDiv.appendChild(topicDiv);
+      }
+    });
+    enableDragAndDrop();
+  }
+
+  document.getElementById('topicForm').addEventListener('submit', addTopic);
+  document.getElementById('deleteTopicBtn').addEventListener('click', deleteTopic);
+  document.addEventListener('DOMContentLoaded', populateParentTopicDropdown);
+  document.addEventListener('DOMContentLoaded', renderMindMap);
+ </script>
+</body>
+</html>
